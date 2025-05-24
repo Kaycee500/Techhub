@@ -1,4 +1,3 @@
-// server/index.ts
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, log } from "./vite";
@@ -45,12 +44,14 @@ app.use((req, res, next) => {
     throw err;
   });
 
-  // 3) Dev vs. Prod
-  if (app.get("env") === "development") {
-    // Vite HMR in dev
+  // 3) Dev vs. Prod with explicit Vercel detection
+  const isLocalDev = process.env.NODE_ENV === "development" && !process.env.VERCEL;
+  if (isLocalDev) {
+    // Vite HMR in local development
     await setupVite(app);
+    console.log("🅸 Running Vite dev middleware");
   } else {
-    // Serve the built React app in prod
+    // Serve the built React app in production or on Vercel
     const distPath = path.resolve(__dirname, "../dist/public");
     if (!fs.existsSync(distPath)) {
       throw new Error(`Missing build dir: ${distPath}`);
@@ -59,6 +60,7 @@ app.use((req, res, next) => {
     app.use("*", (_req, res) => {
       res.sendFile(path.resolve(distPath, "index.html"));
     });
+    console.log("🅿️ Serving static build from:", distPath);
   }
 })();
 
