@@ -1,3 +1,4 @@
+// server/index.ts
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, log } from "./vite";
@@ -5,61 +6,54 @@ import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
 
-// Helper to get __dirname in ESM
+// __dirname helper for ESM
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-// simple request/response logger for /api routes
+// Request logger for /api/*
 app.use((req, res, next) => {
   const start = Date.now();
-  const pathReq = req.path;
-  let capturedJson: Record<string, any> | undefined;
-
-  // monkey-patch res.json
-  const originalJson = res.json;
+  const url = req.path;
+  let jsonBody: any;
+  const origJson = res.json;
   res.json = function (body, ...args) {
-    capturedJson = body;
-    return originalJson.apply(this, [body, ...args]);
+    jsonBody = body;
+    return origJson.call(this, body, ...args);
   };
-
   res.on("finish", () => {
-    if (pathReq.startsWith("/api")) {
-      const duration = Date.now() - start;
-      let line = `${req.method} ${pathReq} ${res.statusCode} in ${duration}ms`;
-      if (capturedJson) {
-        line += ` :: ${JSON.stringify(capturedJson)}`;
-      }
+    if (url.startsWith("/api")) {
+      let line = `${req.method} ${url} ${res.statusCode} in ${Date.now() - start}ms`;
+      if (jsonBody) line += ` :: ${JSON.stringify(jsonBody)}`;
       if (line.length > 80) line = line.slice(0, 79) + "…";
       log(line);
     }
   });
-
   next();
 });
 
 (async () => {
-  // register your /api routes
+  // 1) Mount your API routes
   await registerRoutes(app);
 
-  // error handler
+  // 2) Error handler
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
-    res.status(status).json({ message });
+    res.status(status).json({ message: err.message || "Internal Server Error" });
     throw err;
   });
 
+  // 3) Dev vs. Prod
   if (app.get("env") === "development") {
-    // in dev, let Vite handle HMR & middleware
+    // Vite HMR in dev
     await setupVite(app);
   } else {
-    // in prod, serve the built React app
+    // Serve the built React app in prod
     const distPath = path.resolve(__dirname, "../dist/public");
     if (!fs.existsSync(distPath)) {
-      throw new Error(`Could not find the build directory: ${distPath}`);
+      throw new Error(`Missing build dir: ${distPath}`);
     }
     app.use(express.static(distPath));
     app.use("*", (_req, res) => {
