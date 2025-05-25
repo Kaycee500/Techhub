@@ -4,8 +4,7 @@ import {
   subscriptions, type Subscription, type InsertSubscription
 } from "@shared/schema";
 
-// Extended storage interface with new methods
-export interface IStorage {
+// Extended storage interface with new methods\export interface IStorage {
   // User methods (from original file)
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
@@ -61,8 +60,11 @@ export class MemStorage implements IStorage {
   async createLead(insertLead: InsertLead): Promise<Lead> {
     const id = this.leadId++;
     const now = new Date();
+    // Ensure message is never undefined
+    const message = insertLead.message ?? null;
     const lead: Lead = { 
       ...insertLead, 
+      message,
       id, 
       createdAt: now, 
       contacted: false 
