@@ -1,4 +1,4 @@
-import {
+import { 
   users,
   type User,
   type InsertUser,
@@ -10,31 +10,14 @@ import {
   type InsertSubscription
 } from "@shared/schema";
 
-// Extended storage interface with new methods
-export interface IStorage {
-  // User methods
-  getUser(id: number): Promise<User | undefined>;
-  getUserByUsername(username: string): Promise<User | undefined>;
-  createUser(user: InsertUser): Promise<User>;
-
-  // Lead methods
-  createLead(lead: InsertLead): Promise<Lead>;
-  getLead(id: number): Promise<Lead | undefined>;
-  getAllLeads(): Promise<Lead[]>;
-  updateLeadContactStatus(id: number, contacted: boolean): Promise<Lead | undefined>;
-
-  // Subscription methods
-  createSubscription(subscription: InsertSubscription): Promise<Subscription>;
-  getAllSubscriptions(): Promise<Subscription[]>;
-}
-
-export class MemStorage implements IStorage {
+// Runtime storage implementation; interfaces and types are stripped by TS compiler
+export class MemStorage {
   private users: Map<number, User> = new Map();
   private leads: Map<number, Lead> = new Map();
   private subscriptions: Map<number, Subscription> = new Map();
-  private userId: number = 1;
-  private leadId: number = 1;
-  private subscriptionId: number = 1;
+  private userId = 1;
+  private leadId = 1;
+  private subscriptionId = 1;
 
   async getUser(id: number): Promise<User | undefined> {
     return this.users.get(id);
@@ -83,7 +66,9 @@ export class MemStorage implements IStorage {
   }
 
   async createSubscription(insertSubscription: InsertSubscription): Promise<Subscription> {
-    const existing = Array.from(this.subscriptions.values()).find(sub => sub.email === insertSubscription.email);
+    const existing = Array.from(this.subscriptions.values()).find(
+      sub => sub.email === insertSubscription.email
+    );
     if (existing) return existing;
     const id = this.subscriptionId++;
     const now = new Date();
