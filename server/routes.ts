@@ -2,6 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertLeadSchema, insertSubscriptionSchema } from "@shared/schema";
+import { ZodError } from "zod";
 import { fromZodError } from "zod-validation-error";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -25,11 +26,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           service: lead.service
         }
       });
-    } catch (error) {
+    } catch (err) {
       // If validation error, return 400 with error details
-      if (error instanceof Error) {
-        const zodError = fromZodError(error);
-        res.status(400).json({ message: zodError.message });
+      if (err instanceof ZodError) {
+        const zErr = fromZodError(err);
+        res.status(400).json({ message: zErr.message });
       } else {
         res.status(500).json({ message: "Internal server error" });
       }
